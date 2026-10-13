@@ -1,0 +1,2 @@
+pdf.js 6.3.289 (pdfjs-dist from npm), Apache-2.0 - see LICENSE and wasm/LICENSE_*.
+Files copied unmodified: build/pdf.min.mjs, build/pdf.worker.min.mjs, cmaps/, standard_fonts/, iccs/, wasm/ (minus quickjs-eval, only used for PDF scripting).

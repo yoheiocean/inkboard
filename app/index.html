@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Inkboard</title>
+<meta name="description" content="Self-hosted infinite-canvas sketching app">
+<meta name="theme-color" content="#f6f3ec">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Inkboard">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="stage"><canvas id="board" aria-label="Drawing canvas"></canvas></div>
+
+<header class="topbar">
+  <div class="group">
+    <button class="btn" id="menuBtn" data-icon="menu" title="Menu" aria-haspopup="true" aria-expanded="false"></button>
+    <button class="btn" id="libraryBtn" data-icon="library" data-mode="server" title="My Library"></button>
+    <span class="brand" data-mode="local">Inkboard</span>
+    <button class="doc-title" id="docTitle" data-mode="server" title="Rename drawing"></button>
+    <span class="status" id="saveStatus" aria-live="polite"></span>
+  </div>
+  <div class="group pill">
+    <button class="btn" id="undoBtn" data-icon="undo" title="Undo (Ctrl+Z, two-finger tap)"></button>
+    <button class="btn" id="redoBtn" data-icon="redo" title="Redo (Ctrl+Shift+Z, three-finger tap)"></button>
+    <span class="sep"></span>
+    <button class="btn hide-sm" id="zoomOutBtn" data-icon="minus" title="Zoom out (-)"></button>
+    <button class="btn zoom" id="zoomLabel" title="Reset to 100% (0)">100%</button>
+    <button class="btn hide-sm" id="zoomInBtn" data-icon="plus" title="Zoom in (+)"></button>
+    <button class="btn" id="fitBtn" data-icon="fit" title="Fit drawing (1)"></button>
+  </div>
+  <div class="group pill">
+    <button class="btn" id="gridBtn" data-icon="grid" title="Grid: dots (G)"></button>
+    <button class="btn" id="paperBtn" data-icon="paper" title="Paper colour"></button>
+    <button class="btn" id="pencilBtn" data-icon="stylus" title="Stylus only — fingers pan &amp; zoom"></button>
+    <button class="btn" id="layersBtn" data-icon="layers" title="Layers"></button>
+  </div>
+</header>
+
+<div class="menu" id="fileMenu" role="menu" hidden>
+  <button data-action="library" data-mode="server">My Library</button>
+  <button data-action="new">New drawing</button>
+  <button data-action="open"><span data-mode="local">Open project…</span><span data-mode="server">Import .inkb file…</span> <kbd>Ctrl O</kbd></button>
+  <button data-action="save"><span data-mode="local">Save project</span><span data-mode="server">Download .inkb file</span> <kbd>Ctrl S</kbd></button>
+  <hr>
+  <button data-action="import">Import image or PDF…</button>
+  <hr>
+  <button data-action="png">Export PNG</button>
+  <button data-action="png-t">Export PNG (transparent)</button>
+  <button data-action="svg">Export SVG</button>
+  <button data-action="pdf">Export PDF</button>
+  <hr>
+  <button data-action="help">Shortcuts &amp; gestures</button>
+  <hr data-mode="server">
+  <button data-action="logout" data-mode="server">Sign out <span class="menu-user" id="menuUser"></span></button>
+</div>
+
+<nav class="toolrail" aria-label="Tools">
+  <button class="tool" data-tool="pen" data-icon="pen" title="Pen (B)"></button>
+  <button class="tool" data-tool="pencil" data-icon="pencil" title="Pencil (P)"></button>
+  <button class="tool" data-tool="marker" data-icon="marker" title="Marker (M)"></button>
+  <button class="tool" data-tool="eraser" data-icon="eraser" title="Eraser (E) — tap again for partial / whole"></button>
+  <button class="tool" data-tool="shape" data-icon="shape" title="Shapes (L) — tap again for options"></button>
+  <button class="tool" data-tool="fill" data-icon="fill" title="Fill (F) — draw an outline to fill it"></button>
+  <span class="rail-sep"></span>
+  <button class="tool" data-tool="select" data-icon="select" title="Select &amp; move (V) — tap again for lasso / rectangle"></button>
+  <button class="tool" data-tool="hand" data-icon="hand" title="Pan (H, or hold Space)"></button>
+  <span class="rail-sep"></span>
+  <button class="tool" id="insertBtn" data-icon="insert" title="Insert image or PDF (I)"></button>
+</nav>
+
+<div class="flyout" id="shapeFly" hidden>
+  <button data-shape="line" data-icon="line" title="Line"></button>
+  <button data-shape="rect" data-icon="rect" title="Rectangle"></button>
+  <button data-shape="ellipse" data-icon="ellipse" title="Ellipse"></button>
+</div>
+
+<div class="flyout" id="selectFly" hidden>
+  <button data-select="lasso" data-icon="lasso" title="Lasso select"></button>
+  <button data-select="rect" data-icon="marquee" title="Rectangle select"></button>
+  <span class="fly-sep"></span>
+  <button data-selcut="partial" data-icon="cut" title="Cut through: select only the parts inside"></button>
+  <button data-selcut="whole" data-icon="whole" title="Whole objects"></button>
+</div>
+
+<div class="flyout" id="eraserFly" hidden>
+  <button data-erase="partial" data-icon="cut" title="Partial: erase only what you touch (strokes)"></button>
+  <button data-erase="whole" data-icon="whole" title="Whole: remove entire strokes and fills"></button>
+</div>
+
+<footer class="propbar" aria-label="Brush settings">
+  <div class="swatches" id="swatches"></div>
+  <div class="swatches saved" id="savedSwatches" aria-label="Saved colours" hidden></div>
+  <label class="custom-color" title="Custom colour">
+    <input type="color" id="colorInput" value="#1f2430">
+  </label>
+  <button class="add-color" id="saveColorBtn" data-icon="plus" title="Save current colour"></button>
+  <span class="sep"></span>
+  <label class="slider" id="sizeWrap">
+    <span class="dot-preview"><span id="sizeDot"></span></span>
+    <input type="range" id="sizeInput" min="1" max="100" value="4" aria-label="Size">
+    <output id="sizeOut">4</output>
+  </label>
+  <label class="slider" id="opacityWrap">
+    <span class="lbl">Opacity</span>
+    <input type="range" id="opacityInput" min="5" max="100" value="100" aria-label="Opacity">
+    <output id="opacityOut">100%</output>
+  </label>
+  <label class="slider" id="straightWrap" title="Straightness: 0% freehand, 100% ruler-straight">
+    <span class="lbl">Straight</span>
+    <input type="range" id="straightInput" min="0" max="100" value="0" aria-label="Straightness">
+    <output id="straightOut">0%</output>
+  </label>
+</footer>
+
+<aside class="layers" id="layersPanel" hidden>
+  <div class="layers-head">
+    <strong>Layers</strong>
+    <div>
+      <button class="btn sm" id="layerAdd" data-icon="plus" title="New layer"></button>
+      <button class="btn sm" id="layerDup" data-icon="dup" title="Duplicate layer"></button>
+      <button class="btn sm" id="layerUp" data-icon="up" title="Move up"></button>
+      <button class="btn sm" id="layerDown" data-icon="down" title="Move down"></button>
+      <button class="btn sm" id="layerDel" data-icon="trash" title="Delete layer"></button>
+    </div>
+  </div>
+  <div class="layer-list" id="layerList"></div>
+  <label class="slider layer-opacity">
+    <span class="lbl">Layer opacity</span>
+    <input type="range" id="layerOpacity" min="0" max="100" value="100">
+    <output id="layerOpacityOut">100%</output>
+  </label>
+  <p class="hint">Double-click a layer to rename it.</p>
+</aside>
+
+<div class="selbar" id="selBar" hidden>
+  <button data-sel="front" data-icon="front" title="Bring to front"></button>
+  <button data-sel="back" data-icon="back" title="Send to back"></button>
+  <button data-sel="copy" data-icon="copy" title="Copy (Ctrl+C)"></button>
+  <button data-sel="cut" data-icon="cut" title="Cut (Ctrl+X)"></button>
+  <button data-sel="dup" data-icon="dup" title="Duplicate (Ctrl+D)"></button>
+  <button data-sel="delete" data-icon="trash" title="Delete (Del)"></button>
+</div>
+
+<button class="pastebar" id="pasteBar" data-icon="paste" hidden>Paste</button>
+
+<div class="dialog-backdrop" id="helpDialog" hidden>
+  <div class="dialog" role="dialog" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">Shortcuts &amp; gestures</h2>
+    <div class="help-cols">
+      <dl>
+        <dt>B / P / M</dt><dd>Pen, pencil, marker</dd>
+        <dt>E</dt><dd>Eraser (tap again: partial / whole)</dd>
+        <dt>L</dt><dd>Shapes</dd>
+        <dt>F</dt><dd>Fill (draw an outline)</dd>
+        <dt>V</dt><dd>Select &amp; move (tap again: lasso / rectangle, cut through / whole)</dd>
+        <dt>H or Space</dt><dd>Pan</dd>
+        <dt>I</dt><dd>Insert image or PDF</dd>
+        <dt>[ &nbsp;]</dt><dd>Brush size</dd>
+        <dt>G</dt><dd>Cycle grid</dd>
+        <dt>0 / 1</dt><dd>100% / fit drawing</dd>
+      </dl>
+      <dl>
+        <dt>Ctrl Z / Ctrl Shift Z</dt><dd>Undo / redo</dd>
+        <dt>Ctrl C / X / V</dt><dd>Copy / cut / paste (or tap empty canvas)</dd>
+        <dt>Ctrl D / Del</dt><dd>Duplicate / delete selection</dd>
+        <dt>Shift + drag</dt><dd>Straight line, square, circle</dd>
+        <dt>Hold still</dt><dd>Pause mid-stroke to snap it straight</dd>
+        <dt>Two fingers</dt><dd>Pan &amp; pinch-zoom</dd>
+        <dt>Two-finger tap</dt><dd>Undo</dd>
+        <dt>Three-finger tap</dt><dd>Redo</dd>
+        <dt>Drop / paste</dt><dd>Import images and PDFs</dd>
+      </dl>
+    </div>
+    <p class="hint" data-mode="local">Drawings autosave in this browser. Use <b>Save project</b> to keep a file you can open anywhere.</p>
+    <p class="hint" data-mode="server">Drawings save to your Inkboard server as you work, and to this device if the connection drops.</p>
+    <button class="btn primary" id="helpClose">Got it</button>
+  </div>
+</div>
+
+<div class="dialog-backdrop" id="pdfDialog" hidden>
+  <div class="dialog pdf-dialog" role="dialog" aria-labelledby="pdfTitle">
+    <h2 id="pdfTitle">Import PDF</h2>
+    <p class="hint" id="pdfInfo"></p>
+    <div class="pdf-pages" id="pdfPages"></div>
+    <div class="dialog-actions">
+      <button class="btn" id="pdfAll">Select all</button>
+      <span class="spacer"></span>
+      <button class="btn" id="pdfCancel">Cancel</button>
+      <button class="btn primary" id="pdfImport">Import</button>
+    </div>
+  </div>
+</div>
+
+<section class="library" id="library" hidden aria-label="My Library">
+  <header class="lib-head">
+    <nav class="crumbs" id="libCrumbs" aria-label="Folder path"></nav>
+    <div class="lib-head-actions">
+      <button class="btn" id="libBack" hidden>Back to drawing</button>
+      <button class="btn lib-user" id="libUser" title="Account"><span id="libUserName"></span></button>
+    </div>
+  </header>
+  <div class="lib-actions">
+    <button class="btn primary" id="libNewDrawing">New drawing</button>
+    <button class="btn" id="libNewFolder">New folder</button>
+  </div>
+  <div class="lib-banner" id="libBanner" hidden>
+    <span>There’s a drawing saved in this browser from before you signed in.</span>
+    <button class="btn primary" id="libImportLocal">Add to my library</button>
+    <button class="btn" id="libImportDismiss">Dismiss</button>
+  </div>
+  <div class="lib-grid" id="libGrid"></div>
+  <p class="lib-empty" id="libEmpty" hidden></p>
+  <div class="lib-error" id="libError" hidden>
+    <p id="libErrorText"></p>
+    <button class="btn primary" id="libRetry">Try again</button>
+  </div>
+</section>
+<div class="menu lib-menu" id="libMenu" role="menu" hidden></div>
+
+<div class="dialog-backdrop" id="moveDialog" hidden>
+  <div class="dialog move-dialog" role="dialog" aria-labelledby="moveTitle">
+    <h2 id="moveTitle">Move to…</h2>
+    <div class="move-list" id="moveList"></div>
+    <div class="dialog-actions"><span class="spacer"></span><button class="btn" id="moveCancel">Cancel</button></div>
+  </div>
+</div>
+
+<div class="dialog-backdrop" id="conflictDialog" hidden>
+  <div class="dialog conflict-dialog" role="alertdialog" aria-labelledby="conflictTitle">
+    <h2 id="conflictTitle">Changed on another device</h2>
+    <p id="conflictText">This drawing was saved from another device while you were editing it here.</p>
+    <div class="conflict-actions">
+      <button class="btn primary" data-choice="copy">Save mine as a copy</button>
+      <button class="btn" data-choice="mine">Keep mine (replace theirs)</button>
+      <button class="btn" data-choice="theirs">Load theirs (discard mine)</button>
+    </div>
+  </div>
+</div>
+
+<section class="login" id="login" hidden>
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <img src="icons/icon.svg" alt="" width="56" height="56">
+    <h1>Inkboard</h1>
+    <label>Username or email<input id="loginUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+    <label>Password<input id="loginPass" name="password" type="password" autocomplete="current-password" required></label>
+    <p class="login-error" id="loginError" role="alert"></p>
+    <button class="btn primary" type="submit">Sign in</button>
+  </form>
+  <div class="login-card" id="offlinePanel" hidden>
+    <img src="icons/icon.svg" alt="" width="56" height="56">
+    <h1>Can’t reach the server</h1>
+    <p class="hint">Check your connection. Anything you draw offline is kept on this device and uploads when the server is back.</p>
+    <div class="offline-drafts" id="offlineDrafts"></div>
+    <button class="btn primary" id="offlineRetry">Try again</button>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status"></div>
+<div class="drop-hint" id="dropHint" hidden><span>Drop images, PDFs or an .inkb project</span></div>
+<input type="file" id="openInput" accept=".inkb,.json,application/json" hidden>
+<input type="file" id="imageInput" accept="image/*,application/pdf,.pdf" multiple hidden>
+<script src="api.js"></script>
+<script src="library.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+services:
+  # Static app + reverse proxy for /api. Point Nginx Proxy Manager (or Caddy, etc.) here.
+  inkboard:
+    build: .
+    image: inkboard:latest
+    container_name: inkboard
+    restart: unless-stopped
+    ports:
+      - "19410:80"
+    depends_on:
+      - pocketbase
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  # Accounts, folders, drawings and uploaded images (PocketBase + SQLite).
+  pocketbase:
+    build: ./backend
+    image: inkboard-pocketbase:latest
+    container_name: inkboard-pocketbase
+    restart: unless-stopped
+    ports:
+      # Admin UI at http://<server-ip>:19411/_/ for creating accounts. LAN only: don't add
+      # this port to your reverse proxy or router. Use "127.0.0.1:19411:8090" to restrict it
+      # to the server itself (then reach it through an SSH tunnel).
+      - "19411:8090"
+    volumes:
+      # Everything the server stores. Back this folder up (e.g. to your NAS).
+      - ./data/pb_data:/pb_data
+    security_opt:
+      - no-new-privileges:true
