@@ -2392,6 +2392,7 @@
     $$('#selectFly [data-select]').forEach((b) => b.classList.toggle('active', b.dataset.select === prefs.selectMode));
     $$('#selectFly [data-selcut]').forEach((b) => b.classList.toggle('active', b.dataset.selcut === prefs.selectCut));
     $$('#eraserFly [data-erase]').forEach((b) => b.classList.toggle('active', b.dataset.erase === prefs.eraseMode));
+    updateCursor();
   }
   function makeSwatch(c, saved) {
     const b = document.createElement('button');
@@ -2450,7 +2451,19 @@
   }
   function updateCursor() {
     const t = prefs.tool;
-    canvas.style.cursor = spaceDown || t === 'hand' ? 'grab' : t === 'select' ? 'default' : t === 'eraser' ? 'none' : 'crosshair';
+    canvas.style.cursor = spaceDown || t === 'hand' ? 'grab' : t === 'select' ? 'default' : t === 'eraser' ? 'none' : dotCursor();
+  }
+  // Drawing cursor: a dot in the current colour, as wide as the brush but kept between 6 and 10 px, ringed so it shows on any paper.
+  function dotCursor() {
+    const sk = sizeKey();
+    const d = clamp(sk ? prefs.sizes[sk] : 6, 6, 10);
+    const color = /^#[0-9a-f]{6}$/i.test(prefs.color) ? prefs.color : '#1f2430';
+    const s = d + 4, c = s / 2;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}">` +
+      `<circle cx="${c}" cy="${c}" r="${d / 2 + 1.5}" fill="rgba(0,0,0,0.35)"/>` +
+      `<circle cx="${c}" cy="${c}" r="${d / 2 + 0.75}" fill="#fff"/>` +
+      `<circle cx="${c}" cy="${c}" r="${d / 2}" fill="${color}"/></svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${Math.floor(c)} ${Math.floor(c)}, crosshair`;
   }
   function cycleGrid() {
     prefs.grid = GRIDS[(GRIDS.indexOf(prefs.grid) + 1) % GRIDS.length];
