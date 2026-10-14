@@ -46,7 +46,7 @@ button {
 }
 
 /* Pen drags (Windows Ink, Apple Pencil) would otherwise start a pan gesture and cancel the slider drag. */
-input[type=range] { touch-action: none; }
+input[type=range] { touch-action: none; height: 28px; cursor: pointer; }
 
 svg {
   width: 20px;

@@ -1,5 +1,5 @@
 /* Offline cache for Inkboard. Bump CACHE when you change app files. */
-const CACHE = 'inkboard-v8';
+const CACHE = 'inkboard-v9';
 // pdf.js fonts/cmaps aren't listed; they're cached on first use by the fetch handler.
 const ASSETS = [
   './vendor/pdfjs/pdf.min.mjs',
