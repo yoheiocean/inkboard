@@ -73,7 +73,9 @@ svg {
   pointer-events: none;
   z-index: 20;
 }
-.topbar .group { display: flex; align-items: center; gap: 2px; pointer-events: auto; }
+.topbar .group { display: flex; align-items: center; gap: 2px; pointer-events: auto; flex: none; }
+/* The title group gives up space first, so the buttons always fit (phones, notch insets). */
+.topbar .group:first-child { flex: 0 1 auto; min-width: 0; }
 .pill, .topbar .group:first-child {
   background: var(--panel);
   backdrop-filter: blur(12px);
@@ -425,6 +427,7 @@ svg {
 body:not(.server) [data-mode="server"], body.server [data-mode="local"] { display: none !important; }
 .doc-title {
   max-width: 34vw;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -562,9 +565,24 @@ body:not(.server) [data-mode="server"], body.server [data-mode="local"] { displa
   .topbar { gap: 4px; }
   .btn { min-width: 32px; padding: 0 4px; }
   .btn.zoom { min-width: 46px; }
-  #fitBtn, .pill .sep { display: none; }
+  #fitBtn, #zoomLabel, .pill .sep { display: none; }
   .propbar { left: 10px; right: 10px; transform: none; max-width: none; border-radius: 22px; }
 }
 @media (max-height: 520px) {
+  /* Phones in landscape: two-column tool rail under the top bar; the prop bar starts right of it. */
   .tool { width: 38px; height: 38px; }
+  .toolrail {
+    top: calc(60px + var(--safe-t));
+    transform: none;
+    display: grid;
+    grid-template-columns: repeat(2, 38px);
+  }
+  .rail-sep { grid-column: 1 / -1; }
+  .propbar {
+    left: calc(110px + var(--safe-l));
+    right: calc(10px + var(--safe-r));
+    transform: none;
+    max-width: none;
+    border-radius: 22px;
+  }
 }
