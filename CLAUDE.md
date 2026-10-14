@@ -84,7 +84,7 @@ The full scene is redrawn every frame, culling items by bounding box against the
 - Two touches always start a pinch, aborting any touch-started drawing.
 - "Stylus only" mode (`prefs.pencilOnly`) turns on automatically the first time a pen is seen; after that, fingers only pan and zoom.
 - Two- and three-finger taps trigger undo and redo (the `tap` tracker).
-- Holding still for 650 ms mid-stroke snaps the stroke straight (`armHold`).
+- Ruler toggle (`prefs.ruler`, R key, button in the props bar): pen/pencil/marker strokes are straight lines from the first point (`gesture.straight`). Shift does the same for one stroke. There is no hold-to-straighten.
 - The per-brush Straight slider (`prefs.straight`) is baked into the points by `straighten()` in `buildLive`.
 - Select tool: lasso (default) or rectangle (`prefs.selectMode`). Clipboard is in-memory (`clip`); keyboard copy also writes JSON (`{app:'inkboard-clip'}`) to the system clipboard. Tapping empty canvas with something copied shows the Paste callout.
 - PDF import (`importPdf`) renders chosen pages with pdf.js into PNG/JPEG data URLs and adds ordinary `image` items (uploaded as assets on the next server save).

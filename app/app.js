@@ -46,7 +46,7 @@
     shape: 'M3.5 11.5h9v9h-9zM16.5 3a4.5 4.5 0 1 0 0 9a4.5 4.5 0 1 0 0-9z',
     select: 'M5 3l5.5 16 2.3-6.7L19.5 10z',
     hand: 'M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7l-2.4-3.8a1.5 1.5 0 0 1 2.5-1.7L8 13',
-    line: 'M5 19 19 5',
+    ruler: 'M3 16.5 16.5 3 21 7.5 7.5 21zM6 13.5l2 2M9 10.5l1.3 1.3M12 7.5l2 2M15 4.5l1.3 1.3',
     rect: 'M4 6h16v12H4z',
     ellipse: 'M12 6c4.4 0 8 2.7 8 6s-3.6 6-8 6-8-2.7-8-6 3.6-6 8-6z',
     trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
@@ -125,7 +125,7 @@
       sizes: { pen: 4, pencil: 4, marker: 18, eraser: 28 },
       opacity: { pen: 100, pencil: 100, marker: 100, fill: 100 },
       straight: { pen: 0, pencil: 0, marker: 0 },
-      shape: 'line', selectMode: 'lasso', selectCut: 'partial', eraseMode: 'partial', grid: 'dots', pencilOnly: false,
+      shape: 'rect', ruler: false, selectMode: 'lasso', selectCut: 'partial', eraseMode: 'partial', grid: 'dots', pencilOnly: false,
       savedColors: [],
     };
     d.colors = Object.fromEntries(COLOR_TOOLS.map((t) => [t, d.color]));
@@ -138,6 +138,7 @@
         return {
           ...d, ...s,
           color: base,
+          shape: s.shape === 'ellipse' ? 'ellipse' : 'rect', // 'line' was removed from Shapes
           colors: Object.fromEntries(COLOR_TOOLS.map((t) => [t, isHex(sc[t]) ? sc[t] : base])),
           sizes: { ...d.sizes, ...(s.sizes || {}) },
           opacity: { ...d.opacity, ...(s.opacity || {}) },
@@ -1323,12 +1324,10 @@
         ...base, kind: 'draw', brush: tool, size, color: prefs.color,
         opacity: prefs.opacity[tool] / 100, straightness: clamp((prefs.straight[tool] || 0) / 100, 0, 1), raw: [],
         minSp: Math.max(0.6 / view.scale, size * (tool === 'marker' ? 0.18 : 0.12)),
-        dirty: true, straight: false, shift: e.shiftKey, end: null,
-        holdX: e.clientX, holdY: e.clientY, holdTimer: null,
+        dirty: true, straight: prefs.ruler, shift: e.shiftKey, end: null,
       };
       addPoint(gesture, w.x, w.y, pressureOf(e));
       gesture.end = gesture.raw[0].slice();
-      armHold(gesture);
       requestRender();
       return;
     }
@@ -1379,20 +1378,6 @@
     pts.push([wx, wy, p]);
     return true;
   }
-  function armHold(g) {
-    clearTimeout(g.holdTimer);
-    if (g.straight || g.shift) return;
-    g.holdTimer = setTimeout(() => {
-      if (gesture !== g) return;
-      const a = g.raw[0], b = g.raw[g.raw.length - 1];
-      if (Math.hypot(b[0] - a[0], b[1] - a[1]) * view.scale < 24) return;
-      g.straight = true;
-      g.end = b.slice();
-      g.dirty = true;
-      if (navigator.vibrate) navigator.vibrate(8);
-      requestRender();
-    }, 650);
-  }
   function buildLive(g) {
     let pts;
     if (g.straight || g.shift) {
@@ -1416,38 +1401,29 @@
     let ax = g.a.x, ay = g.a.y, bx = g.b.x, by = g.b.y;
     const p = 0.5;
     let pts = [];
-    if (g.shape === 'line') {
-      if (g.shift) {
-        const ang = Math.round(Math.atan2(by - ay, bx - ax) / (Math.PI / 12)) * (Math.PI / 12);
-        const L = Math.hypot(bx - ax, by - ay);
-        bx = ax + Math.cos(ang) * L; by = ay + Math.sin(ang) * L;
+    if (g.shift) {
+      const d = Math.max(Math.abs(bx - ax), Math.abs(by - ay));
+      bx = ax + Math.sign(bx - ax || 1) * d;
+      by = ay + Math.sign(by - ay || 1) * d;
+    }
+    if (g.shape === 'rect') {
+      const c = [[ax, ay, p], [bx, ay, p], [bx, by, p], [ax, by, p], [ax, ay, p]];
+      for (let i = 1; i < c.length; i++) {
+        const seg = linePts(c[i - 1], c[i], p, g.size);
+        pts = pts.concat(i === 1 ? seg : seg.slice(1));
       }
-      pts = linePts([ax, ay, p], [bx, by, p], p, g.size);
     } else {
-      if (g.shift) {
-        const d = Math.max(Math.abs(bx - ax), Math.abs(by - ay));
-        bx = ax + Math.sign(bx - ax || 1) * d;
-        by = ay + Math.sign(by - ay || 1) * d;
-      }
-      if (g.shape === 'rect') {
-        const c = [[ax, ay, p], [bx, ay, p], [bx, by, p], [ax, by, p], [ax, ay, p]];
-        for (let i = 1; i < c.length; i++) {
-          const seg = linePts(c[i - 1], c[i], p, g.size);
-          pts = pts.concat(i === 1 ? seg : seg.slice(1));
-        }
-      } else {
-        const cx = (ax + bx) / 2, cy = (ay + by) / 2, rx = Math.abs(bx - ax) / 2, ry = Math.abs(by - ay) / 2;
-        const per = Math.PI * (3 * (rx + ry) - Math.sqrt((3 * rx + ry) * (rx + 3 * ry)));
-        const n = Math.max(24, Math.ceil(per / Math.max(g.size * 0.3, 0.5)));
-        for (let i = 0; i <= n; i++) {
-          const t = (i / n) * Math.PI * 2;
-          pts.push([cx + Math.cos(t) * rx, cy + Math.sin(t) * ry, p]);
-        }
+      const cx = (ax + bx) / 2, cy = (ay + by) / 2, rx = Math.abs(bx - ax) / 2, ry = Math.abs(by - ay) / 2;
+      const per = Math.PI * (3 * (rx + ry) - Math.sqrt((3 * rx + ry) * (rx + 3 * ry)));
+      const n = Math.max(24, Math.ceil(per / Math.max(g.size * 0.3, 0.5)));
+      for (let i = 0; i <= n; i++) {
+        const t = (i / n) * Math.PI * 2;
+        pts.push([cx + Math.cos(t) * rx, cy + Math.sin(t) * ry, p]);
       }
     }
     return {
       type: 'stroke', id: 'live', brush: g.brush, color: g.color, size: g.size,
-      opacity: g.opacity, noTaper: g.shape !== 'line', points: pts,
+      opacity: g.opacity, noTaper: true, points: pts,
     };
   }
 
@@ -1761,7 +1737,6 @@
           const w = toWorld(ev.clientX, ev.clientY);
           if (g.straight || g.shift) { g.end = [w.x, w.y, pressureOf(ev)]; g.dirty = true; } else if (addPoint(g, w.x, w.y, pressureOf(ev))) g.dirty = true;
         }
-        if (Math.hypot(e.clientX - g.holdX, e.clientY - g.holdY) > 4) { g.holdX = e.clientX; g.holdY = e.clientY; armHold(g); }
         requestRender();
         break;
       }
@@ -1821,7 +1796,6 @@
 
   function abortGesture() {
     if (!gesture) return;
-    clearTimeout(gesture.holdTimer);
     gesture = null;
     liveItem = null;
     preview = null;
@@ -1836,7 +1810,6 @@
     switch (g.kind) {
       case 'pan': updateCursor(); break;
       case 'draw': {
-        clearTimeout(g.holdTimer);
         if (!g.straight && !g.shift && e) {
           const w = toWorld(e.clientX, e.clientY), last = g.raw[g.raw.length - 1];
           if (Math.hypot(w.x - last[0], w.y - last[1]) > g.minSp * 0.5) g.raw.push([w.x, w.y, last[2]]);
@@ -2394,6 +2367,8 @@
     const st = stk ? prefs.straight[stk] : 0;
     $('#straightInput').value = st;
     $('#straightOut').textContent = `${st}%`;
+    $('#rulerBtn').disabled = !stk;
+    $('#rulerBtn').classList.toggle('on', prefs.ruler);
     $$('.swatch').forEach((s) => s.classList.toggle('active', s.dataset.color.toLowerCase() === prefs.color.toLowerCase()));
     $('#colorInput').value = /^#[0-9a-f]{6}$/i.test(prefs.color) ? prefs.color : '#1f2430';
     for (const t of COLOR_TOOLS) $(`.toolrail [data-tool="${t}"] .tool-color`).style.background = prefs.colors[t];
@@ -2449,6 +2424,12 @@
     savePrefs();
     syncProps();
     if (commitRecolor && prefs.tool === 'select' && selection.size) recolorSelection(c);
+  }
+  function toggleRuler() {
+    prefs.ruler = !prefs.ruler;
+    savePrefs();
+    syncProps();
+    toast(prefs.ruler ? 'Ruler on: pen, pencil and marker draw straight lines' : 'Ruler off: freehand');
   }
   function changeSize(dir) {
     const sk = sizeKey();
@@ -2639,6 +2620,7 @@
     $('#fitBtn').addEventListener('click', fitContent);
     $('#gridBtn').addEventListener('click', cycleGrid);
     $('#paperBtn').addEventListener('click', cyclePaper);
+    $('#rulerBtn').addEventListener('click', toggleRuler);
     $('#pencilBtn').addEventListener('click', () => {
       setPencilOnly(!prefs.pencilOnly);
       toast(prefs.pencilOnly ? 'Stylus only: fingers pan & zoom' : 'Fingers draw too');
@@ -2786,6 +2768,7 @@
     const map = { b: 'pen', p: 'pencil', m: 'marker', e: 'eraser', l: 'shape', f: 'fill', v: 'select', h: 'hand' };
     if (map[k]) { setTool(map[k]); return; }
     if (k === 'i') { $('#imageInput').click(); return; }
+    if (k === 'r') { toggleRuler(); return; }
     if (k === '[') changeSize(-1);
     else if (k === ']') changeSize(1);
     else if (k === 'g') cycleGrid();

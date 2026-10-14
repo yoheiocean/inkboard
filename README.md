@@ -17,8 +17,8 @@ A self-hosted sketching app for the browser, inspired by infinite-canvas apps li
 - **Infinite canvas** — pan (two fingers, Space+drag, middle mouse, hand tool), pinch / Ctrl+wheel zoom, fit-to-drawing
 - **Brushes** — pressure-sensitive pen, pencil, and multiply-blended marker; Apple Pencil and other styluses supported
 - **Stylus-only mode** — auto-enables when a pen is detected, so palms and fingers only pan/zoom
-- **Straight lines** — per-brush *Straight* slider (0% freehand → 100% ruler-straight), hold still mid-stroke to snap, or hold Shift
-- **Shapes** — line, rectangle, ellipse (Shift for 15° angles, squares, circles)
+- **Straight lines** — Ruler toggle (R) for straight pen, pencil and marker lines, per-brush *Straight* slider (0% freehand → 100% ruler-straight), or hold Shift
+- **Shapes** — rectangle, ellipse (Shift for squares and circles)
 - **Fill** — draw any outline and it becomes a filled shape (uses the colour and opacity slider)
 - **Eraser** — erases just the part of a stroke you rub over, and removes a fill when you rub on it (ink drawn on top of a fill is erased without deleting the fill). Tap the eraser again for *whole* mode, which removes entire strokes. Images and PDF pages are never erased; select them and press Delete, or lasso part of one and delete that part
 - **Select** — tap, lasso or rectangle (tap the select tool again for options). By default the selection *cuts through* objects: lasso part of a stroke, image, PDF page or fill and only that part is selected (switch to *whole objects* in the options); move, scale from the corner handle, copy / cut / paste (Ctrl+C/X/V, or tap empty canvas to paste), duplicate, delete, reorder, recolour

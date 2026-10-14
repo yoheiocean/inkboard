@@ -75,7 +75,6 @@
 </nav>
 
 <div class="flyout" id="shapeFly" hidden>
-  <button data-shape="line" data-icon="line" title="Line"></button>
   <button data-shape="rect" data-icon="rect" title="Rectangle"></button>
   <button data-shape="ellipse" data-icon="ellipse" title="Ellipse"></button>
 </div>
@@ -116,6 +115,7 @@
     <input type="range" id="straightInput" min="0" max="100" value="0" aria-label="Straightness">
     <output id="straightOut">0%</output>
   </label>
+  <button class="btn" id="rulerBtn" data-icon="ruler" title="Ruler (R): pen, pencil and marker draw straight lines"></button>
 </footer>
 
 <aside class="layers" id="layersPanel" hidden>
@@ -157,6 +157,7 @@
         <dt>B / P / M</dt><dd>Pen, pencil, marker</dd>
         <dt>E</dt><dd>Eraser (tap again: partial / whole)</dd>
         <dt>L</dt><dd>Shapes</dd>
+        <dt>R</dt><dd>Ruler: straight lines on / off</dd>
         <dt>F</dt><dd>Fill (draw an outline)</dd>
         <dt>V</dt><dd>Select &amp; move (tap again: lasso / rectangle, cut through / whole)</dd>
         <dt>H or Space</dt><dd>Pan</dd>
@@ -170,7 +171,6 @@
         <dt>Ctrl C / X / V</dt><dd>Copy / cut / paste (or tap empty canvas)</dd>
         <dt>Ctrl D / Del</dt><dd>Duplicate / delete selection</dd>
         <dt>Shift + drag</dt><dd>Straight line, square, circle</dd>
-        <dt>Hold still</dt><dd>Pause mid-stroke to snap it straight</dd>
         <dt>Two fingers</dt><dd>Pan &amp; pinch-zoom</dd>
         <dt>Two-finger tap</dt><dd>Undo</dd>
         <dt>Three-finger tap</dt><dd>Redo</dd>
