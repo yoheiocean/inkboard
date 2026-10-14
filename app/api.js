@@ -145,6 +145,7 @@ window.InkAPI = (() => {
       sort: '-updated',
       fields: 'id,title,folder,thumbnail,revision,updated',
     }),
+    listUntitled: () => listAll('drawings', { filter: 'title = "Untitled drawing"', sort: 'created', fields: 'id,created' }),
     getDrawing: (did) => request('GET', `${records('drawings')}/${id(did)}`),
     createDrawing: (fields) => request('POST', records('drawings'), { form: toForm({ ...fields, owner: me() }) }),
     updateDrawing: (did, fields) => request('PATCH', `${records('drawings')}/${id(did)}`, { form: toForm(fields) }),

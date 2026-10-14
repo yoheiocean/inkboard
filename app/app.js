@@ -1133,17 +1133,11 @@
       return false;
     }
   }
-  // Default title for a new drawing: local date and time, e.g. "Oct 13, 2026 19:59".
-  function dateTitle(t = new Date()) {
-    const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][t.getMonth()];
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${mon} ${t.getDate()}, ${t.getFullYear()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
-  }
   async function newServerDrawing(folder, d, title) {
     try {
       await flushCurrent().catch(() => {});
       const fresh = d || newDoc();
-      const rec = await InkAPI.createDrawing({ title: title || dateTitle(), folder: folder || '', data: d ? undefined : jsonBlob(fresh) });
+      const rec = await InkAPI.createDrawing({ title: title || InkLibrary.dateTitle(), folder: folder || '', data: d ? undefined : jsonBlob(fresh) });
       loadDocument(fresh);
       adopt(rec);
       if (d) markDirty(); else setStatus('');

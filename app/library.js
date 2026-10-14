@@ -27,6 +27,29 @@ window.InkLibrary = (() => {
     }
     return '';
   }
+  // Default title for a new drawing: local date and time, e.g. "Oct 13, 2026 19:59".
+  function dateTitle(t = new Date()) {
+    const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][t.getMonth()];
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${mon} ${t.getDate()}, ${t.getFullYear()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
+  }
+  // Drawings made before date titles were called "Untitled drawing": rename them after their
+  // creation time, once per signed-in user per session (oldest first, so newer ones end up on top).
+  let untitledDoneFor = null;
+  async function renameUntitled() {
+    const uid = InkAPI.user && InkAPI.user.id;
+    if (!uid || untitledDoneFor === uid) return;
+    untitledDoneFor = uid;
+    try {
+      for (const d of await InkAPI.listUntitled()) {
+        const t = new Date(Date.parse(String(d.created).replace(' ', 'T')));
+        if (!Number.isFinite(t.getTime())) continue;
+        const title = dateTitle(t);
+        await InkAPI.updateDrawing(d.id, { title });
+        o.renamed(d.id, title);
+      }
+    } catch (err) { console.warn('Renaming untitled drawings failed', err); untitledDoneFor = null; }
+  }
   function errorText(err) {
     if (!err) return 'Something went wrong';
     if (err.status === 0) return 'Can’t reach the Inkboard server. Check your connection.';
@@ -65,6 +88,7 @@ window.InkLibrary = (() => {
     const seq = ++loadSeq;
     lib.classList.add('loading');
     try {
+      await renameUntitled();
       const [fs, ds] = await Promise.all([InkAPI.listFolders(), InkAPI.listDrawings(folderId)]);
       if (seq !== loadSeq) return;
       folders = fs;
@@ -290,5 +314,5 @@ window.InkLibrary = (() => {
     });
   }
 
-  return { init, show, hide, refresh, isOpen, showLogin, showOffline };
+  return { init, show, hide, refresh, isOpen, showLogin, showOffline, dateTitle };
 })();
