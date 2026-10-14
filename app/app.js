@@ -2667,7 +2667,8 @@
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? H : 1;
-      if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * unit * 0.01));
+      // A mouse-wheel notch is ~100px; cap each event so one notch zooms ~10%. Trackpad pinches send small deltas and stay smooth.
+      if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, Math.exp(-clamp(e.deltaY * unit, -10, 10) * 0.01));
       else { view.x -= e.deltaX * unit; view.y -= e.deltaY * unit; viewChanged(); }
     }, { passive: false });
     document.addEventListener('touchmove', (e) => { if (e.target === canvas) e.preventDefault(); }, { passive: false });
