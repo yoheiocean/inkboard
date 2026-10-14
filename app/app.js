@@ -21,6 +21,7 @@
     marker: { alpha: 0.55, multiply: true },
   };
   const DRAW_TOOLS = ['pen', 'pencil', 'marker'];
+  const COLOR_TOOLS = ['pen', 'pencil', 'marker', 'shape', 'fill']; // each remembers its own colour (prefs.colors)
   const MIN_SCALE = 0.05, MAX_SCALE = 40;
   const HISTORY_LIMIT = 150;
   const EXPORT_PAD = 24;
@@ -127,11 +128,17 @@
       shape: 'line', selectMode: 'lasso', selectCut: 'partial', eraseMode: 'partial', grid: 'dots', pencilOnly: false,
       savedColors: [],
     };
+    d.colors = Object.fromEntries(COLOR_TOOLS.map((t) => [t, d.color]));
     try {
       const s = JSON.parse(localStorage.getItem('inkboard.prefs') || 'null');
       if (s && typeof s === 'object') {
+        // Prefs saved before per-tool colours start every tool on the old shared colour.
+        const base = isHex(s.color) ? s.color : d.color;
+        const sc = s.colors && typeof s.colors === 'object' ? s.colors : {};
         return {
           ...d, ...s,
+          color: base,
+          colors: Object.fromEntries(COLOR_TOOLS.map((t) => [t, isHex(sc[t]) ? sc[t] : base])),
           sizes: { ...d.sizes, ...(s.sizes || {}) },
           opacity: { ...d.opacity, ...(s.opacity || {}) },
           straight: { ...d.straight, ...(s.straight || {}) },
@@ -2341,6 +2348,7 @@
     if (t !== 'select') dropPendingCut();
     prefs.tool = t;
     if (DRAW_TOOLS.includes(t)) prefs.lastBrush = t;
+    if (COLOR_TOOLS.includes(t)) prefs.color = prefs.colors[t];
     if (t !== 'select') selection.clear();
     $$('.toolrail [data-tool]').forEach((b) => b.classList.toggle('active', b.dataset.tool === t));
     if (t !== 'shape') $('#shapeFly').hidden = true;
@@ -2388,6 +2396,7 @@
     $('#straightOut').textContent = `${st}%`;
     $$('.swatch').forEach((s) => s.classList.toggle('active', s.dataset.color.toLowerCase() === prefs.color.toLowerCase()));
     $('#colorInput').value = /^#[0-9a-f]{6}$/i.test(prefs.color) ? prefs.color : '#1f2430';
+    for (const t of COLOR_TOOLS) $(`.toolrail [data-tool="${t}"] .tool-color`).style.background = prefs.colors[t];
     $$('#shapeFly [data-shape]').forEach((b) => b.classList.toggle('active', b.dataset.shape === prefs.shape));
     $$('#selectFly [data-select]').forEach((b) => b.classList.toggle('active', b.dataset.select === prefs.selectMode));
     $$('#selectFly [data-selcut]').forEach((b) => b.classList.toggle('active', b.dataset.selcut === prefs.selectCut));
@@ -2436,6 +2445,7 @@
   }
   function setColor(c, commitRecolor) {
     prefs.color = c;
+    if (COLOR_TOOLS.includes(prefs.tool)) prefs.colors[prefs.tool] = c;
     savePrefs();
     syncProps();
     if (commitRecolor && prefs.tool === 'select' && selection.size) recolorSelection(c);
@@ -2516,6 +2526,7 @@
   // ---------------------------------------------------------------- wiring
   function bindUI() {
     $$('[data-icon]').forEach((el) => el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon)));
+    for (const t of COLOR_TOOLS) $(`.toolrail [data-tool="${t}"]`).insertAdjacentHTML('beforeend', '<span class="tool-color"></span>');
 
     const sw = $('#swatches');
     for (const c of SWATCHES) sw.appendChild(makeSwatch(c, false));

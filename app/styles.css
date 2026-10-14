@@ -172,6 +172,17 @@ svg {
   border-bottom-color: currentColor;
   opacity: 0.6;
 }
+/* Each colour tool's remembered colour; the panel-coloured ring keeps light and dark colours visible. */
+.tool-color {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--panel), 0 0 0 2.5px var(--line);
+  pointer-events: none;
+}
 .rail-sep { height: 1px; background: var(--line); margin: 3px 6px; }
 
 .flyout {

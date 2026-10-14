@@ -95,7 +95,7 @@ The full scene is redrawn every frame, culling items by bounding box against the
 
 **Persistence, local mode:**
 - The doc is saved to IndexedDB (`inkboard` DB, `kv` store, key `doc`) 700 ms after the last change, and at most 3 s after the first unsaved one. If the saved doc can't be read, it's copied to `doc-unreadable-<ts>` first; if storage can't be opened, autosave turns off (`autosaveOff`).
-- The view and preferences (including saved colours) live in localStorage (`inkboard.view`, `inkboard.prefs`). `inkboard.mode` remembers the last detected mode so an offline start in local mode stays local.
+- The view and preferences (including saved colours and per-tool colours: `prefs.colors` for pen, pencil, marker, shape and fill; `prefs.color` is the active colour, used for recolouring selections) live in localStorage (`inkboard.view`, `inkboard.prefs`). `inkboard.mode` remembers the last detected mode so an offline start in local mode stays local.
 
 **Persistence, server mode** (section "server mode"):
 - `current = { id, title, folder, revision }` is the open drawing. `editSeq` counts edits, `syncedSeq` the edits covered by the last successful upload.
